@@ -121,7 +121,7 @@ const Process = () => {
                     />
                   )}
                 </div>
-                <div className="absolute left-1/2 w-10 h-10 -ml-5 bg-blue-600 dark:bg-blue-400 rounded-full border-4 border-white dark:border-gray-800 transform -translate-x-1/2 -translate-y-1/2 pulse "></div>
+                <div className="absolute left-1/2 w-10 h-10  bg-blue-600 dark:bg-blue-400 rounded-full border-4 border-white dark:border-gray-800 transform -translate-x-1/2 -translate-y-1/2 pulse "></div>
                 <div
                   className={`w-1/2 ${
                     index % 2 === 0 ? "pl-8 text-left" : "pr-8 pl-3 text-right"

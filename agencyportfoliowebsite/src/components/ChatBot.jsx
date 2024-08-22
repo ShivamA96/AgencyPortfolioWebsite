@@ -40,10 +40,13 @@ const ChatBot = () => {
   };
 
   const addMessage = (text, isUser = false) => {
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { role: isUser ? "user" : "assistant", content: text },
-    ]);
+    const newMessage = { role: isUser ? "user" : "assistant", content: text };
+    setMessages((prevMessages) => {
+      const updatedMessages = [...prevMessages, newMessage];
+      // Save updated messages to local storage
+      localStorage.setItem("messages", JSON.stringify(updatedMessages));
+      return updatedMessages;
+    });
   };
 
   const handleInput = async () => {
@@ -79,15 +82,19 @@ const ChatBot = () => {
   };
 
   useEffect(() => {
-    // Attempt to retrieve userId and conversationId from local storage when the component mounts
+    // Attempt to retrieve userId, conversationId, and messages from local storage when the component mounts
     const storedUserId = localStorage.getItem("userId");
     const storedConversationId = localStorage.getItem("conversationId");
+    const storedMessages = localStorage.getItem("messages");
 
     if (storedUserId) {
       setUserId(storedUserId);
     }
     if (storedConversationId) {
       setConversationId(storedConversationId);
+    }
+    if (storedMessages) {
+      setMessages(JSON.parse(storedMessages));
     }
   }, []);
 
@@ -110,6 +117,7 @@ const ChatBot = () => {
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
     }
   }, [messages]);
+
   return (
     <div className="bg-[#0a1929] text-gray-200 font-roboto min-h-screen flex items-center justify-center z-50 absolute">
       <button
@@ -238,26 +246,14 @@ const ChatBot = () => {
                       handleInput();
                     }
                   }}
+                  disabled={isLoading}
                 />
                 <button
-                  className="bg-[#2c5282] text-white p-2 rounded-full transition-colors duration-300 hover:bg-[#3182ce]"
                   onClick={handleInput}
+                  className="bg-gradient-to-r from-[#ff5d5d] to-[#6a37bb] text-white p-2 rounded-full shadow-lg transition-transform duration-300 hover:scale-105"
                   disabled={isLoading}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                  </svg>
+                  Send
                 </button>
               </div>
             </div>
