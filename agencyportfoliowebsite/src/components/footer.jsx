@@ -7,7 +7,7 @@ export class footer extends Component {
         <div class="max-w-screen mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex flex-wrap justify-between items-center">
             <div class="w-full md:w-1/3 text-center md:text-left mb-4 md:mb-0">
-              <h3 class="text-2xl font-bold">AgencyName</h3>
+              <h3 class="text-2xl font-bold">Turbosite</h3>
               <p class="mt-2">Elevating digital experiences</p>
             </div>
             <div class="w-full md:w-1/3 text-center mb-4 md:mb-0">
@@ -63,7 +63,7 @@ export class footer extends Component {
               </div>
             </div>
             <div class="w-full md:w-1/3 text-center md:text-right">
-              <p>&copy; 2023 AgencyName. All rights reserved.</p>
+              <p>&copy; 2024 Turbosite. All rights reserved.</p>
             </div>
           </div>
         </div>

@@ -1,78 +1,120 @@
 import React, { useState, useEffect, useRef } from "react";
-// import "tailwindcss/tailwind.css";
+import axios from "axios";
 
 const ChatBot = () => {
   const [pluginVisible, setPluginVisible] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
+  const [userDetails, setUserDetails] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  });
+  const [userId, setUserId] = useState(null);
+  const [conversationId, setConversationId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const contentRef = useRef(null);
-
-  useEffect(() => {
-    addMessage(
-      "Welcome to the Tailwind-powered WebSim AI with enhanced readability and managed suggestion buttons! Our quill icon represents our commitment to clear communication through efficient Tailwind classes. How can I help make your web content more readable and user-friendly with Tailwind CSS today?"
-    );
-    setSuggestions([
-      "Analyze Tailwind Site",
-      "Readability Classes",
-      "Dark Mode Setup",
-      "Responsive Typography",
-      "Tailwind Config Tips",
-    ]);
-  }, []);
+  const API_URL = "http://localhost:8000";
 
   const togglePlugin = () => {
     setPluginVisible(!pluginVisible);
   };
 
-  const addMessage = (text, isUser = false) => {
-    setMessages((prevMessages) => [...prevMessages, { text, isUser }]);
-    setTimeout(() => {
-      if (contentRef.current) {
-        contentRef.current.scrollTop = contentRef.current.scrollHeight;
-      }
-    }, 100);
-  };
-
-  const handleInput = (userInput = inputValue.trim()) => {
-    if (userInput) {
-      addMessage(userInput, true);
-      setInputValue("");
-
-      setTimeout(() => {
-        let response;
-        if (
-          userInput.toLowerCase().startsWith("http") ||
-          userInput.toLowerCase().includes(".")
-        ) {
-          response = `Analyzing webpage: ${userInput} with Tailwind-optimized readability. Our enhanced WebSim AI now offers Tailwind class suggestions for optimized contrast ratios, typography recommendations for better legibility, and layout class suggestions to reduce eye strain. Which aspect of Tailwind-based readability would you like me to focus on?`;
-          setSuggestions([
-            "Tailwind Contrast",
-            "Typography Classes",
-            "Layout Optimization",
-            "Dark Mode Classes",
-          ]);
-        } else {
-          response = `As the Tailwind-focused WebSim AI, I can provide insights on Tailwind typography classes, color contrast utilities, content structure best practices, and other factors that enhance text comprehension and user experience using Tailwind CSS. How can I help improve the readability of your Tailwind-based web project?`;
-          setSuggestions([
-            "Tailwind Typography",
-            "Color Utilities",
-            "Responsive Classes",
-            "Accessibility Tips",
-            "Custom Theming",
-          ]);
-        }
-        addMessage(response);
-      }, 1000);
+  const handleUserDetailsSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/submitDetails`, {
+        name: userDetails.name,
+        emailid: userDetails.email,
+        phonenum: userDetails.phone,
+      });
+      setUserId(response.data.id);
+      // We'll set the conversationId when we start the first chat
+    } catch (error) {
+      console.error("Error submitting user details:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const addMessage = (text, isUser = false) => {
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { role: isUser ? "user" : "assistant", content: text },
+    ]);
+  };
+
+  const handleInput = async () => {
+    const userInput = inputValue.trim();
+    if (userInput && userId) {
+      addMessage(userInput, true);
+      setInputValue("");
+      setIsLoading(true);
+
+      try {
+        // If this is the first message, we don't have a conversationId yet
+        const chatEndpoint = conversationId
+          ? `${API_URL}/chat/${userId}?conversation_id=${conversationId}`
+          : `${API_URL}/chat/${userId}`;
+
+        const response = await axios.post(chatEndpoint, {
+          question: userInput,
+        });
+
+        // If this was the first message, save the new conversationId
+        if (!conversationId && response.data.conversation_id) {
+          setConversationId(response.data.conversation_id);
+        }
+
+        addMessage(response.data.response, false);
+      } catch (error) {
+        console.error("Error sending message:", error);
+        addMessage("Sorry, there was an error processing your message.", false);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    // Attempt to retrieve userId and conversationId from local storage when the component mounts
+    const storedUserId = localStorage.getItem("userId");
+    const storedConversationId = localStorage.getItem("conversationId");
+
+    if (storedUserId) {
+      setUserId(storedUserId);
+    }
+    if (storedConversationId) {
+      setConversationId(storedConversationId);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Save userId to local storage whenever it changes
+    if (userId) {
+      localStorage.setItem("userId", userId);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    // Save conversationId to local storage whenever it changes
+    if (conversationId) {
+      localStorage.setItem("conversationId", conversationId);
+    }
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTop = contentRef.current.scrollHeight;
+    }
+  }, [messages]);
   return (
     <div className="bg-[#0a1929] text-gray-200 font-roboto min-h-screen flex items-center justify-center z-50 absolute">
       <button
         id="websim-toggle"
-        className={`fixed bottom-5 right-5 bg-gradient-to-r from-[#6a37bb] to-[#ff5d5d] text-white p-4 rounded-full cursor-pointer shadow-lg  transition-transform duration-300 hover:scale-110 flex items-center justify-center ${
+        className={`fixed bottom-5 right-5 bg-gradient-to-r from-[#6a37bb] to-[#ff5d5d] text-white p-4 rounded-full cursor-pointer shadow-lg transition-transform duration-300 hover:scale-110 flex items-center justify-center ${
           pluginVisible ? "hidden" : ""
         }`}
         onClick={togglePlugin}
@@ -112,71 +154,115 @@ const ChatBot = () => {
             X
           </button>
         </div>
-        <div
-          id="websim-content"
-          className="flex-grow overflow-y-auto p-5 bg-[#0f2940] flex flex-col space-y-4"
-          ref={contentRef}
-        >
-          {messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`p-3 rounded-lg shadow max-w-[80%] ${
-                msg.isUser ? "self-end bg-[#2c5282]" : "self-start bg-[#1a3a5c]"
-              }`}
-            >
-              {msg.text}
-            </div>
-          ))}
-        </div>
-        <div
-          id="websim-input-container"
-          className="p-4 bg-[#0d2137] flex flex-col space-y-4"
-        >
-          <div id="websim-suggestions" className="flex flex-wrap gap-2">
-            {suggestions.map((suggestion, idx) => (
-              <button
-                key={idx}
-                className="bg-[#1a3a5c] text-white px-3 py-2 rounded-full text-sm transition-colors duration-300 hover:bg-[#2c5282] flex-grow"
-                onClick={() => handleInput(suggestion)}
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-          <div id="websim-input" className="flex items-center space-x-2">
+        {!userId ? (
+          <form
+            onSubmit={handleUserDetailsSubmit}
+            className="p-4 flex flex-col space-y-4"
+          >
             <input
               type="text"
-              placeholder="Enter a URL or ask a question..."
-              className="flex-grow p-2 rounded-full bg-[#1a3a5c] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") {
-                  handleInput();
-                }
-              }}
+              placeholder="Name"
+              className="p-2 rounded-lg bg-[#1a3a5c] text-white"
+              value={userDetails.name}
+              onChange={(e) =>
+                setUserDetails({ ...userDetails, name: e.target.value })
+              }
+              required
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              className="p-2 rounded-lg bg-[#1a3a5c] text-white"
+              value={userDetails.email}
+              onChange={(e) =>
+                setUserDetails({ ...userDetails, email: e.target.value })
+              }
+              required
+            />
+            <input
+              type="tel"
+              placeholder="Phone"
+              className="p-2 rounded-lg bg-[#1a3a5c] text-white"
+              value={userDetails.phone}
+              onChange={(e) =>
+                setUserDetails({ ...userDetails, phone: e.target.value })
+              }
+              required
             />
             <button
-              className="bg-[#2c5282] text-white p-2 rounded-full transition-colors duration-300 hover:bg-[#3182ce]"
-              onClick={() => handleInput()}
+              type="submit"
+              className="bg-[#2c5282] text-white p-2 rounded-lg"
+              disabled={isLoading}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
+              {isLoading ? "Starting..." : "Start Chat"}
             </button>
-          </div>
-        </div>
+          </form>
+        ) : (
+          <>
+            <div
+              id="websim-content"
+              className="flex-grow overflow-y-auto p-5 bg-[#0f2940] flex flex-col space-y-4"
+              ref={contentRef}
+            >
+              {messages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`p-3 rounded-lg shadow max-w-[80%] ${
+                    msg.role === "user"
+                      ? "self-end bg-[#2c5282]"
+                      : "self-start bg-[#1a3a5c]"
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              ))}
+              {isLoading && (
+                <div className="self-start bg-[#1a3a5c] p-3 rounded-lg shadow max-w-[80%]">
+                  <span className="animate-pulse">Thinking...</span>
+                </div>
+              )}
+            </div>
+            <div
+              id="websim-input-container"
+              className="p-4 bg-[#0d2137] flex flex-col space-y-4"
+            >
+              <div id="websim-input" className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  placeholder="Type your message..."
+                  className="flex-grow p-2 rounded-full bg-[#1a3a5c] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      handleInput();
+                    }
+                  }}
+                />
+                <button
+                  className="bg-[#2c5282] text-white p-2 rounded-full transition-colors duration-300 hover:bg-[#3182ce]"
+                  onClick={handleInput}
+                  disabled={isLoading}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
